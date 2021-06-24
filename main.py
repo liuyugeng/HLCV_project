@@ -12,94 +12,91 @@ from utils import *
 from train import *
 from tqdm import tqdm
 
-def train_target_model():
-    pass
+def train_target(TARGET_PATH, device, target_model, train_loader, test_loader, use_DP, num_classes, noise, norm, batch_size):
+    model = model_training(train_loader, test_loader, target_model, device, use_DP, num_classes, noise, norm, batch_size)
+
+    for i in range(300):
+        print("<======================= Epoch " + str(i+1) + " =======================>")
+        print("target training")
+        acc_train = model.train()
+        print("target testing")
+        acc_test = model.test()
+
+    filename = "target_model_" + str(noise) + "_" + str(norm) + ".pth"
+    FILE_PATH = TARGET_PATH + filename
+    model.saveModel(FILE_PATH)
+    print("saved target model!!!\nFinished training!!!")
+
+def train_distillation(MODEL_PATH, DL_PATH, device, target_model, student_model, train_loader, test_loader, noise, norm, status):
+	MODEL_PATH = MODEL_PATH + "target_model_" + str(noise) + "_" + str(norm) + ".pth"
+	distillation = distillation_training(MODEL_PATH, train_loader, test_loader, student_model, target_model, device)
+
+	for i in range(300):
+		print("<======================= Epoch " + str(i+1) + " =======================>")
+		print(status + " distillation training")
+
+		acc_distillation_train = distillation.train()
+		print(status + " distillation testing")
+		acc_distillation_test = distillation.test()
+		
+	result_path = DL_PATH + "traget_model_" + str(noise) + "_" + str(norm) + ".pth"
+	distillation.saveModel(result_path)
+	print("saved " + "distillation target model!!!\nFinished training!!!")
+
+# def train_attack_model(TARGET_PATH, ATTACK_PATH, classes, device, target_model, train_loader, test_loader, epoch, loss, optimizer, dataset_type, mode, get_attack_set, r):
+#     input_classes = get_gradient_size(target_model)
+#     attack_model = OverlearningAttackModel(input_classes=input_classes, output_classes=classes)
+#     ATTACK_SETS = TARGET_PATH + "ol_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + "_mode" + str(args.mode)
+#     TARGET_PATH = TARGET_PATH + "target_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + ".pth"
+#     MODELS_PATH = ATTACK_PATH + "attack_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + ".pth"
+#     RESULT_PATH = ATTACK_PATH + "attack_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + ".p"
+
+#     attack = attack_training(train_loader, test_loader, attack_model, target_model, device, TARGET_PATH, r)
+
+#     # if get_attack_set:
+#     # 	attack.delete_pickle(ATTACK_SETS)
+#     # 	attack.prepare_dataset(ATTACK_SETS)
+
+#     for epoch in range(300):
+#         print("<======================= Epoch " + str(epoch+1) + " =======================>")
+#         print("attack training")
+
+#         res_attack_train = attack.train(epoch, RESULT_PATH, dataset_type)
+#         print("attack testing")
+#         res_attack_test = attack.test(epoch, RESULT_PATH, dataset_type)
+
+#     attack.saveModel(MODELS_PATH)
+#     print("Saved Attack Model")
+#     print("Finished!!!")
 
 
-def train_attack_model(TARGET_PATH, ATTACK_PATH, classes, device, target_model, train_loader, test_loader, epoch, loss, optimizer, dataset_type, mode, get_attack_set, r):
-    input_classes = get_gradient_size(target_model)
-    attack_model = OverlearningAttackModel(input_classes=input_classes, output_classes=classes)
-    ATTACK_SETS = TARGET_PATH + "ol_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + "_mode" + str(args.mode)
-    TARGET_PATH = TARGET_PATH + "target_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + ".pth"
-    MODELS_PATH = ATTACK_PATH + "attack_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + ".pth"
-    RESULT_PATH = ATTACK_PATH + "attack_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + ".p"
+#     return res_attack_train, res_attack_test
 
-    attack = attack_training(train_loader, test_loader, attack_model, target_model, device, TARGET_PATH, r)
+# def count_data(num_classes, dataset):
+#     data_list_1 = [0 for i in range(num_classes[0])]
+#     data_list_2 = [0 for i in range(num_classes[1])]
 
-    # if get_attack_set:
-    # 	attack.delete_pickle(ATTACK_SETS)
-    # 	attack.prepare_dataset(ATTACK_SETS)
+#     for _, [num0, num1] in tqdm(dataset):
+#         data_list_1[num0] += 1
+#         data_list_2[num1] += 1
 
-    for epoch in range(300):
-        print("<======================= Epoch " + str(epoch+1) + " =======================>")
-        print("attack training")
+#     print(data_list_1)
+#     print(data_list_2)
 
-        res_attack_train = attack.train(epoch, RESULT_PATH, dataset_type)
-        print("attack testing")
-        res_attack_test = attack.test(epoch, RESULT_PATH, dataset_type)
+#     data_list_2.sort(reverse=True)
 
-    attack.saveModel(MODELS_PATH)
-    print("Saved Attack Model")
-    print("Finished!!!")
+#     result = data_list_2[0]/(np.array(data_list_2).sum())*100.
 
+#     print('%.2f%%' % (result))
 
-    return res_attack_train, res_attack_test
+# def get_gradient_size(model):
+#     gradient_list = reversed(list(model.named_parameters()))
+#     for name, parameter in gradient_list:
+#         if 'weight' in name:
+#             input_size = parameter.shape[1]
+#             break
 
-def count_data(num_classes, dataset):
-    data_list_1 = [0 for i in range(num_classes[0])]
-    data_list_2 = [0 for i in range(num_classes[1])]
-
-    for _, [num0, num1] in tqdm(dataset):
-        data_list_1[num0] += 1
-        data_list_2[num1] += 1
-
-    print(data_list_1)
-    print(data_list_2)
-
-    data_list_2.sort(reverse=True)
-
-    result = data_list_2[0]/(np.array(data_list_2).sum())*100.
-
-    print('%.2f%%' % (result))
-
-def get_model(model_name, num_classes):
-    if model_name == "alexnet":
-        from models.overlearning import AlexNet
-        blackbox_oracle = AlexNet(num_classes=num_classes)
-        
-    elif model_name == "resnet18":
-        from models.overlearning import resnet18
-        blackbox_oracle = resnet18(num_classes=num_classes)
-
-    elif model_name == "vgg19":
-        from models.overlearning import vgg19_bn
-        blackbox_oracle = vgg19_bn(num_classes=num_classes)
-
-    elif model_name == "xception":
-        from models.overlearning import xception
-        blackbox_oracle = xception(num_classes=num_classes)
-
-    elif model_name == "vgg11":
-        from models.overlearning import vgg11_bn
-        blackbox_oracle = vgg11_bn(num_classes=num_classes)
-
-    elif model_name == "CNN":
-        from models.overlearning import Simple_CNN
-        blackbox_oracle = Simple_CNN(num_classes=num_classes)
-
-    else:
-        sys.exit("we have not supported this model yet! :((((")
-
-    return blackbox_oracle
-
-def get_gradient_size(model):
-    gradient_list = reversed(list(model.named_parameters()))
-    for name, parameter in gradient_list:
-        if 'weight' in name:
-            input_size = parameter.shape[1]
-            break
-
-    return input_size
+#     return input_size
 
 def str_to_bool(string):
     if isinstance(string, bool):
@@ -139,8 +136,14 @@ if __name__ == "__main__":
     parser.add_argument('-c', '--checkpoint', type=str_to_bool, default=True,
                         help='choose to save model in different epochs')
 
+    parser.add_argument('-t', '--target', type=str_to_bool, default=False,
+                        help='whether or not train target model')
+
     parser.add_argument('-dl', '--distill', type=str_to_bool, default=False,
                         help='where or not test a distillation model')
+
+    parser.add_argument('-dt', '--distill_target', type=str_to_bool, default=False,
+						help='whether or not train distillation target model')
 
     parser.add_argument('-ne', '--noise', type=float, default=1.0,
                         help='choose noise for dp model')
@@ -166,50 +169,72 @@ if __name__ == "__main__":
 
     if args.DP:
         if args.DP_type == 0:
-            noise = {"UTKFace": 1.3, "celeba": 0.9}
-            norm = {"UTKFace": 1.5, "celeba": 1.5}
+            noise_set = {"UTKFace": 1.3, "celeba": 0.9}
+            norm_set = {"UTKFace": 1.5, "celeba": 1.5}
 
         elif args.DP_type == 1:
-            noise = {"UTKFace": 1.5, "celeba": 0.8}
-            norm = {"UTKFace": 2.0, "celeba": 2.0}
+            noise_set = {"UTKFace": 1.5, "celeba": 0.8}
+            norm_set = {"UTKFace": 2.0, "celeba": 2.0}
 
         else:
             sys.exit("we have not supported this DP mode! hahaha")
 
-        first = str(noise[args.dataset])
-        second = str(norm[args.dataset])
+        noise = noise_set[args.dataset]
+        norm = norm_set[args.dataset]
 
     else:
-        first = "CEL"
-        second = "SGD"
+        noise = None
+        norm = None
 
     # get data set
-    num_classes, target_train, target_test = prepare_dataset(args.model, args.dataset, args.batch_size, attributes)
+    num_classes, target_train, target_test, target_model = prepare_dataset(args.model, args.dataset, attributes)
 
     # mkdir path
-    TARGET_PATH = "../data/hlcv/target/" + args.dataset + "/" + args.model + "/"
-    ATTACK_PATH = "../data/hlcv/attack/" + args.dataset + "/" + args.model + "/mode" + str(args.mode) + "/"
+    TARGET_PATH = "./data/hlcv/target/" + args.dataset + "/" + args.model + "/"
+    ATTACK_PATH = "./data/hlcv/attack/" + args.dataset + "/" + args.model + "/"
 
     if args.distill:
-        TARGET_PATH = TARGET_PATH + "distill/"
-        ATTACK_PATH = ATTACK_PATH + "distill/"
-        target_model = get_model("vgg11", num_classes[0])
-    
-    elif args.DP:
-        TARGET_PATH = TARGET_PATH + "dp/"
-        ATTACK_PATH = ATTACK_PATH + "dp/" + first + "_" + second + "/"
-        target_model = get_model("CNN", num_classes[0])
+        DL_TARGET_PATH = TARGET_PATH + "distill/"
+        DL_ATTACK_PATH = ATTACK_PATH + "distill/"
 
+        if not os.path.exists(DL_TARGET_PATH):
+            os.makedirs(DL_TARGET_PATH)
+        
+        if not os.path.exists(DL_ATTACK_PATH):
+            os.makedirs(DL_ATTACK_PATH)
+    
+    if args.DP:
+        TARGET_PATH = TARGET_PATH + "dp/"
+        ATTACK_PATH = ATTACK_PATH + "dp/" + str(noise) + "_" + str(norm) + "/"
     else:
         TARGET_PATH = TARGET_PATH + "basic/"
         ATTACK_PATH = ATTACK_PATH + "basic/"
-        target_model = get_model(args.model, num_classes[0])
 
     if not os.path.exists(TARGET_PATH):
         os.makedirs(TARGET_PATH)
     
     if not os.path.exists(ATTACK_PATH):
         os.makedirs(ATTACK_PATH)
+
+    target_trainloader = torch.utils.data.DataLoader(
+        target_train, batch_size=args.batch_size, shuffle=True, num_workers=2)
+    target_testloader = torch.utils.data.DataLoader(
+        target_test, batch_size=args.batch_size, shuffle=True, num_workers=2)  
+
+    # train target model
+    if args.target:
+        train_target(TARGET_PATH, device, target_model, target_trainloader, target_testloader, args.DP, num_classes, noise, norm, args.batch_size)
+    
+    #train distillation target model
+    if args.distill:
+        if args.model == "vgg19":
+            student_target_model = models.vgg11(num_classes=num_classes[0])
+        else:
+            sys.exit("we have not supported this model for distillation yet! 0w0")
+        if args.distill_target:
+            train_distillation(TARGET_PATH, DL_TARGET_PATH, device, target_model, student_target_model, target_trainloader, target_testloader, noise, norm)
+        target_model = student_target_model
+        TARGET_PATH = DL_TARGET_PATH
     
     attack_length = int(0.5 * len(target_train))
     rest = len(target_train) - int(0.5 * len(target_train))
@@ -229,10 +254,10 @@ if __name__ == "__main__":
     else:
         sys.exit("we have not supported this dataset yet! QwQ")
 
-    acc_train, acc_test = train_attack_model(TARGET_PATH, ATTACK_PATH, num_classes[1], device, target_model, attack_trainloader, attack_testloader, first, second, dataset_type, args.get_attack_set)
+    # acc_train, acc_test = train_attack_model(TARGET_PATH, ATTACK_PATH, num_classes[1], device, target_model, attack_trainloader, attack_testloader, first, second, dataset_type, args.get_attack_set)
 
-    with open('./result.csv', 'a') as f:
-        f.write(args.dataset + '_' + args.model + '_' + str(args.layer) + '_' + str(args.distill) + '_' + str(args.DP) + '_' + first + '_' + second)
-        for num in acc_test:
-            f.write(" " + str(round(num, 6)))
-        f.write("\n")
+    # with open('./result.csv', 'a') as f:
+    #     f.write(args.dataset + '_' + args.model + '_' + str(args.layer) + '_' + str(args.distill) + '_' + str(args.DP) + '_' + first + '_' + second)
+    #     for num in acc_test:
+    #         f.write(" " + str(round(num, 6)))
+    #     f.write("\n")

@@ -6,9 +6,12 @@ import torchvision
 torch.manual_seed(0)
 import torch.nn as nn
 import PIL.Image as Image
+import torchvision.models as models
 import torchvision.transforms as transforms
 
+
 from tqdm import tqdm
+from define_model import *
 from functools import partial
 from typing import Any, Callable, List, Optional, Union, Tuple
 
@@ -98,17 +101,11 @@ class CelebA(torch.utils.data.Dataset):
 
         fn = partial(os.path.join, self.root, self.base_folder)
         splits = pandas.read_csv(fn("list_eval_partition.txt"), delim_whitespace=True, header=None, index_col=0)
-        identity = pandas.read_csv(fn("identity_CelebA.txt"), delim_whitespace=True, header=None, index_col=0)
-        bbox = pandas.read_csv(fn("list_bbox_celeba.txt"), delim_whitespace=True, header=1, index_col=0)
-        landmarks_align = pandas.read_csv(fn("list_landmarks_align_celeba.txt"), delim_whitespace=True, header=1)
         attr = pandas.read_csv(fn("list_attr_celeba.txt"), delim_whitespace=True, header=1)
 
         mask = slice(None)
 
         self.filename = splits[mask].index.values
-        self.identity = torch.as_tensor(identity[mask].values)
-        self.bbox = torch.as_tensor(bbox[mask].values)
-        self.landmarks_align = torch.as_tensor(landmarks_align[mask].values)
         self.attr = torch.as_tensor(attr[mask].values)
         self.attr = (self.attr + 1) // 2  # map from {-1, 1} to {0, 1}
         self.attr_names = list(attr.columns)
@@ -123,12 +120,6 @@ class CelebA(torch.utils.data.Dataset):
                 for i in range(len(nums)):
                     final_attr += 2 ** i * self.attr[index][nums[i]]
                 target.append(final_attr)
-            elif t == "identity":
-                target.append(self.identity[index, 0])
-            elif t == "bbox":
-                target.append(self.bbox[index, :])
-            elif t == "landmarks":
-                target.append(self.landmarks_align[index, :])
             else:
                 # TODO: refactor with utils.verify_str_arg
                 raise ValueError("Target type \"{}\" is not recognized.".format(t))
@@ -153,23 +144,95 @@ class CelebA(torch.utils.data.Dataset):
         lines = ["Target type: {target_type}", "Split: {split}"]
         return '\n'.join(lines).format(**self.__dict__)
 
-def get_dataset(target_type=["identity", "attr"]):
-    root = './data'
-    transform = transforms.Compose([
-        transforms.RandomHorizontalFlip(),
-        transforms.Resize((128, 128)),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ])
+def prepare_dataset(model, dataset, attr):
+    num_classes, dataset, target_model = get_model_dataset(model, dataset, attr=attr)
+    train_length = int(len(dataset)*0.8)
+    test_length = len(dataset) - int(len(dataset)*0.8)
+    target_train, target_test= torch.utils.data.random_split(dataset, [train_length, test_length])
+
+    return num_classes, target_train, target_test, target_model
+
+def get_model_dataset(model_name, dataset_name, attr):
+    root = './data/'
+    if dataset_name == "UTKFace":
+        if not isinstance(attr, list):
+            sys.exit("please provide an attribute list")
+
+        num_classes = []
+        for a in attr:
+            if a == "age":
+                num_classes.append(117)
+            elif a == "gender":
+                num_classes.append(2)
+            elif a == "race":
+                num_classes.append(4)
+            else:
+                raise ValueError("Target type \"{}\" is not recognized.".format(a))
+
+        transform = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.Resize((64, 64)),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        ])
+
+        dataset = UTKFaceDataset(root=root, attr=attr, transform=transform)
+
+        if model_name == "alexnet":
+            target_model = models.alexnet(num_classes=num_classes[0])
+
+        elif model_name == "resnet18":
+            target_model = models.resnet18(num_classes=num_classes[0])
+
+        elif model_name == "vgg11":
+            target_model = models.vgg11(num_classes=num_classes[0])
+
+        elif model_name == "vgg19":
+            target_model = models.vgg19(num_classes=num_classes[0])
+
+        elif model_name == "CNN":
+            target_model = CNN(num_classes=num_classes[0])
+            
+        else:
+            sys.exit("we have not supported this model yet! :()")
+        
+
+    elif dataset_name == "celeba":
+        if not isinstance(attr, list):
+            sys.exit("please provide an attribute list")
+        for a in attr:
+            if a != "attr":
+                raise ValueError("Target type \"{}\" is not recognized.".format(a))
+            num_classes = [8, 4]
+            # heavyMakeup MouthSlightlyOpen Smiling, Male Young
+            attr_list = [[18, 21, 31], [20, 39]]
+
+        transform = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.Resize((64, 64)),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        ])
+
+        dataset = CelebA(root=root, attr_list=attr_list, target_type=attr, transform=transform)
+
+        if model_name == "alexnet":
+            target_model = models.alexnet(num_classes=num_classes[0])
+
+        elif model_name == "resnet18":
+            target_model = models.resnet18(num_classes=num_classes[0])
+
+        elif model_name == "vgg11":
+            target_model = models.vgg11(num_classes=num_classes[0])
+
+        elif model_name == "vgg19":
+            target_model = models.vgg19(num_classes=num_classes[0])
+
+        elif model_name == "CNN":
+            target_model = CNN(num_classes=num_classes[0])
+            
+        else:
+            sys.exit("we have not supported this model yet! :()")
 
 
-    dataset_30_target = CelebA(root=root, split="30", uses="target", target_type=target_type, transform=transform)
-    dataset_30_train_member = CelebA(root=root, split="30", uses="train", target_type=target_type, transform=transform)
-    dataset_30_test_member = CelebA(root=root, split="30", uses="test", target_type=target_type, transform=transform)
-    dataset_30_train_non_member = CelebA(root=root, split="30", member=False, uses="train", target_type=target_type, transform=transform)
-    dataset_30_test_non_member = CelebA(root=root, split="30", member=False, uses="test", target_type=target_type, transform=transform)
-    dataset_else = CelebA(root=root, split="else", target_type=target_type, transform=transform)
-
-    # print(len(dataset_30_target), len(dataset_30_train_member), len(dataset_30_test_member), len(dataset_30_train_non_member), len(dataset_30_test_non_member))
-
-    return dataset_30_target, dataset_30_train_member, dataset_30_test_member, dataset_30_train_non_member, dataset_30_test_non_member, dataset_else
+    return num_classes, dataset, target_model

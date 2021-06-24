@@ -28,7 +28,7 @@ def weights_init(m):
         nn.init.constant_(m.bias, 0)
 
 class model_training():
-    def __init__(self, trainloader, testloader, model, device, use_DP, num_classes, noise, norm):
+    def __init__(self, trainloader, testloader, model, device, use_DP, num_classes, noise, norm, batch_size):
         self.use_DP = use_DP
         self.device = device
         self.net = model.to(self.device)
@@ -52,7 +52,7 @@ class model_training():
             inspector.validate(self.net)
             privacy_engine = PrivacyEngine(
                 self.net,
-                batch_size=64,
+                batch_size=batch_size,
                 sample_size=len(self.trainloader.dataset),
                 alphas=[1 + x / 10.0 for x in range(1, 100)] + list(range(12, 64)),
                 noise_multiplier=self.noise_multiplier,
@@ -72,11 +72,12 @@ class model_training():
         correct = 0
         total = 0
         
-        for batch_idx, (inputs, targets) in enumerate(self.trainloader):
+        for batch_idx, (inputs, [targets, _]) in enumerate(self.trainloader):
             if str(self.criterion) != "CrossEntropyLoss()":
                 targets = torch.from_numpy(np.eye(self.num_classes)[targets]).float()
 
             inputs, targets = inputs.to(self.device), targets.to(self.device)
+
             self.optimizer.zero_grad()
             outputs = self.net(inputs)
 
@@ -115,7 +116,7 @@ class model_training():
         correct = 0
         total = 0
         with torch.no_grad():
-            for inputs, targets in self.testloader:
+            for inputs, [targets, _] in self.testloader:
                 if str(self.criterion) != "CrossEntropyLoss()":
                     targets = torch.from_numpy(np.eye(self.num_classes)[targets]).float()
 
