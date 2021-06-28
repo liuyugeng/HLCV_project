@@ -230,3 +230,7 @@ def get_model_dataset(model_name, dataset_name, attr):
 
 
     return num_classes, dataset, target_model
+
+def get_attack_model(inputs_classes, outputs_classes):
+    model = attack_model(inputs_classes, outputs_classes)
+    return model

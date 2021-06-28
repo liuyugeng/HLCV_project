@@ -58,13 +58,10 @@ def test_target_model(model, PATH, dataset, device):
     print('Test Acc: %.3f%% (%d/%d)' % (100.*correct/total, correct, total))
 
 
-def train_attack_model(TARGET_PATH, ATTACK_PATH, classes, device, target_model, train_loader, test_loader, epoch, loss, optimizer, dataset_type, mode, get_attack_set, r):
-    input_classes = get_gradient_size(target_model)
-    attack_model = OverlearningAttackModel(input_classes=input_classes, output_classes=classes)
-    ATTACK_SETS = TARGET_PATH + "ol_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + "_mode" + str(args.mode)
-    TARGET_PATH = TARGET_PATH + "target_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + ".pth"
-    MODELS_PATH = ATTACK_PATH + "attack_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + ".pth"
-    RESULT_PATH = ATTACK_PATH + "attack_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + ".p"
+def train_attack_model(TARGET_PATH, ATTACK_PATH, output_classes, device, target_model, train_loader, test_loader, noise, norm, layer):
+    input_classes = get_gradient_size(target_model, layer)
+    attack_model = get_attack_model(input_classes=input_classes, output_classes=output_classes)
+    TARGET_PATH = TARGET_PATH + "target_epoch_" + str(noise) + "_" + str(norm) + ".pth"
 
     attack = attack_training(train_loader, test_loader, attack_model, target_model, device, TARGET_PATH, r)
 
@@ -268,7 +265,7 @@ if __name__ == "__main__":
     else:
         sys.exit("we have not supported this dataset yet! QwQ")
 
-    acc_train, acc_test = train_attack_model(TARGET_PATH, ATTACK_PATH, num_classes[1], device, target_model, attack_trainloader, attack_testloader, noise, norm)
+    acc_train, acc_test = train_attack_model(TARGET_PATH, ATTACK_PATH, num_classes[1], device, target_model, attack_trainloader, attack_testloader, noise, norm, args.layer)
 
     with open('./result.csv', 'a') as f:
         f.write(args.dataset + '_' + args.model + '_' + str(args.layer) + '_' + str(args.distill) + '_' + str(args.DP) + '_' + noise + '_' + norm)

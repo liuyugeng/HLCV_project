@@ -33,12 +33,10 @@ class CNN(nn.Module):
         return x_6
 
 class attack_model(nn.Moudle):
-    def __init__(self, input, output):
+    def __init__(self, inputs, outputs):
         super(attack_model, self).__init__()
-
-        self.classifier = nn.Linear(input, output)
+        self.classifier = nn.Linear(inputs, outputs)
 
     def forward(self, x):
         x = self.classifier(x)
-
         return x
