@@ -1,16 +1,12 @@
 import os
 import sys
 import torch
-import random
 import argparse
-import numpy as np
-import torchvision
 import torch.multiprocessing
 import torchvision.models as models
 
 from utils import *
 from train import *
-from tqdm import tqdm
 
 def train_target(TARGET_PATH, device, target_model, train_loader, test_loader, use_DP, num_classes, noise, norm, batch_size):
     model = model_training(train_loader, test_loader, target_model, device, use_DP, num_classes, noise, norm, batch_size)
@@ -27,21 +23,40 @@ def train_target(TARGET_PATH, device, target_model, train_loader, test_loader, u
     model.saveModel(FILE_PATH)
     print("saved target model!!!\nFinished training!!!")
 
-def train_distillation(MODEL_PATH, DL_PATH, device, target_model, student_model, train_loader, test_loader, noise, norm, status):
-	MODEL_PATH = MODEL_PATH + "target_model_" + str(noise) + "_" + str(norm) + ".pth"
-	distillation = distillation_training(MODEL_PATH, train_loader, test_loader, student_model, target_model, device)
+def train_distillation(MODEL_PATH, DL_PATH, device, target_model, student_model, train_loader, test_loader, noise, norm):
+    MODEL_PATH = MODEL_PATH + "target_model_" + str(noise) + "_" + str(norm) + ".pth"
+    # test_target_model(target_model, MODEL_PATH, test_loader, device)
+    distillation = distillation_training(MODEL_PATH, train_loader, test_loader, student_model, target_model, device)
 
-	for i in range(300):
-		print("<======================= Epoch " + str(i+1) + " =======================>")
-		print(status + " distillation training")
+    for i in range(300):
+        print("<======================= Epoch " + str(i+1) + " =======================>")
+        print("target distillation training")
 
-		acc_distillation_train = distillation.train()
-		print(status + " distillation testing")
-		acc_distillation_test = distillation.test()
-		
-	result_path = DL_PATH + "traget_model_" + str(noise) + "_" + str(norm) + ".pth"
-	distillation.saveModel(result_path)
-	print("saved " + "distillation target model!!!\nFinished training!!!")
+        acc_distillation_train = distillation.train()
+        print("target distillation testing")
+        acc_distillation_test = distillation.test()
+        
+    result_path = DL_PATH + "target_model_" + str(noise) + "_" + str(norm) + ".pth"
+    distillation.saveModel(result_path)
+    print("saved distillation target model!!!\nFinished training!!!")
+
+def test_target_model(model, PATH, dataset, device):
+    model.load_state_dict(torch.load(PATH))
+    model = model.to(device)
+    model.eval()
+
+    total, correct = 0, 0
+    with torch.no_grad():
+        for inputs, [targets, _] in dataset:
+            inputs, targets = inputs.to(device), targets.to(device)
+            outputs = model(inputs)
+
+            _, predicted = outputs.max(1)
+            total += targets.size(0)
+            correct += predicted.eq(targets).sum().item()
+
+    print('Test Acc: %.3f%% (%d/%d)' % (100.*correct/total, correct, total))
+
 
 # def train_attack_model(TARGET_PATH, ATTACK_PATH, classes, device, target_model, train_loader, test_loader, epoch, loss, optimizer, dataset_type, mode, get_attack_set, r):
 #     input_classes = get_gradient_size(target_model)
@@ -143,7 +158,7 @@ if __name__ == "__main__":
                         help='where or not test a distillation model')
 
     parser.add_argument('-dt', '--distill_target', type=str_to_bool, default=False,
-						help='whether or not train distillation target model')
+                        help='whether or not train distillation target model')
 
     parser.add_argument('-ne', '--noise', type=float, default=1.0,
                         help='choose noise for dp model')

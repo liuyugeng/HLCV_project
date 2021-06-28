@@ -184,9 +184,6 @@ def get_model_dataset(model_name, dataset_name, attr):
         elif model_name == "resnet18":
             target_model = models.resnet18(num_classes=num_classes[0])
 
-        elif model_name == "vgg11":
-            target_model = models.vgg11(num_classes=num_classes[0])
-
         elif model_name == "vgg19":
             target_model = models.vgg19(num_classes=num_classes[0])
 
@@ -221,9 +218,6 @@ def get_model_dataset(model_name, dataset_name, attr):
 
         elif model_name == "resnet18":
             target_model = models.resnet18(num_classes=num_classes[0])
-
-        elif model_name == "vgg11":
-            target_model = models.vgg11(num_classes=num_classes[0])
 
         elif model_name == "vgg19":
             target_model = models.vgg19(num_classes=num_classes[0])

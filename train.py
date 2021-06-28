@@ -148,10 +148,7 @@ class distillation_training():
         self.PATH = PATH
         self.teacher = teacher.to(self.device)
         self.teacher.load_state_dict(torch.load(self.PATH))
-
-        if self.device == 'cuda':
-            self.model = torch.nn.DataParallel(self.model)
-            cudnn.benchmark = True
+        self.teacher.eval()
 
         self.criterion = nn.KLDivLoss(reduction='batchmean')
         self.optimizer = optim.SGD(self.model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
@@ -165,12 +162,11 @@ class distillation_training():
 
     def train(self):
         self.model.train()
-        self.teacher.eval()
         train_loss = 0
         correct = 0
         total = 0
 
-        for batch_idx, (inputs, targets) in enumerate(self.trainloader):
+        for batch_idx, (inputs, [targets,_]) in enumerate(self.trainloader):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
@@ -200,7 +196,7 @@ class distillation_training():
         correct = 0
         total = 0
         with torch.no_grad():
-            for inputs, targets in self.testloader:
+            for inputs, [targets,_] in self.testloader:
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 outputs = self.model(inputs)
 
