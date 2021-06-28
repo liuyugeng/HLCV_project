@@ -1,17 +1,9 @@
-import os
-import sys
-import time
-import glob
 import torch
-import random
 import pickle
-import torchvision
-import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
-import torchvision.transforms as transforms
 
 from opacus import PrivacyEngine
 from torch.optim import lr_scheduler
@@ -36,11 +28,6 @@ class model_training():
         self.testloader = testloader
 
         self.num_classes = num_classes
-
-        if self.device == 'cuda':
-            self.net = torch.nn.DataParallel(self.net)
-            cudnn.benchmark = True
-
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = optim.SGD(self.net.parameters(), lr=1e-2, momentum=0.9, weight_decay=5e-4)
 
@@ -73,8 +60,6 @@ class model_training():
         total = 0
         
         for batch_idx, (inputs, [targets, _]) in enumerate(self.trainloader):
-            if str(self.criterion) != "CrossEntropyLoss()":
-                targets = torch.from_numpy(np.eye(self.num_classes)[targets]).float()
 
             inputs, targets = inputs.to(self.device), targets.to(self.device)
 
@@ -88,9 +73,6 @@ class model_training():
             train_loss += loss.item()
             _, predicted = outputs.max(1)
             total += targets.size(0)
-            if str(self.criterion) != "CrossEntropyLoss()":
-                _, targets= targets.max(1)
-
             correct += predicted.eq(targets).sum().item()
 
         if self.use_DP:
@@ -117,9 +99,6 @@ class model_training():
         total = 0
         with torch.no_grad():
             for inputs, [targets, _] in self.testloader:
-                if str(self.criterion) != "CrossEntropyLoss()":
-                    targets = torch.from_numpy(np.eye(self.num_classes)[targets]).float()
-
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 outputs = self.net(inputs)
 
@@ -128,9 +107,6 @@ class model_training():
                 test_loss += loss.item()
                 _, predicted = outputs.max(1)
                 total += targets.size(0)
-                if str(self.criterion) != "CrossEntropyLoss()":
-                    _, targets= targets.max(1)
-
                 correct += predicted.eq(targets).sum().item()
 
             print( 'Test Acc: %.3f%% (%d/%d)' % (100.*correct/total, correct, total))
@@ -151,13 +127,13 @@ class distillation_training():
         self.teacher.eval()
 
         self.criterion = nn.KLDivLoss(reduction='batchmean')
-        self.optimizer = optim.SGD(self.model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
+        self.optimizer = optim.SGD(self.model.parameters(), lr=1e-2, momentum=0.9, weight_decay=5e-4)
 
         self.scheduler = lr_scheduler.MultiStepLR(self.optimizer, [50, 100], 0.1)
 
     def distillation_loss(self, y, labels, teacher_scores, T, alpha):
         loss = self.criterion(F.log_softmax(y/T, dim=1), F.softmax(teacher_scores/T, dim=1))
-        loss = loss * (T*T * 2.0 * alpha) + F.cross_entropy(y, labels) * (1. - alpha)
+        loss = loss * (T*T * alpha) + F.cross_entropy(y, labels) * (1. - alpha)
         return loss
 
     def train(self):
@@ -166,14 +142,14 @@ class distillation_training():
         correct = 0
         total = 0
 
-        for batch_idx, (inputs, [targets,_]) in enumerate(self.trainloader):
+        for batch_idx, (inputs, [targets, _]) in enumerate(self.trainloader):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
             teacher_output = self.teacher(inputs)
             teacher_output = teacher_output.detach()
     
-            loss = self.distillation_loss(outputs, targets, teacher_output, T=20.0, alpha=0.7)
+            loss = self.distillation_loss(outputs, targets, teacher_output, T=2.0, alpha=0.95)
             loss.backward()
             self.optimizer.step()
 
@@ -196,7 +172,7 @@ class distillation_training():
         correct = 0
         total = 0
         with torch.no_grad():
-            for inputs, [targets,_] in self.testloader:
+            for inputs, [targets, _] in self.testloader:
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 outputs = self.model(inputs)
 
