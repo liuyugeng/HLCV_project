@@ -58,60 +58,60 @@ def test_target_model(model, PATH, dataset, device):
     print('Test Acc: %.3f%% (%d/%d)' % (100.*correct/total, correct, total))
 
 
-# def train_attack_model(TARGET_PATH, ATTACK_PATH, classes, device, target_model, train_loader, test_loader, epoch, loss, optimizer, dataset_type, mode, get_attack_set, r):
-#     input_classes = get_gradient_size(target_model)
-#     attack_model = OverlearningAttackModel(input_classes=input_classes, output_classes=classes)
-#     ATTACK_SETS = TARGET_PATH + "ol_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + "_mode" + str(args.mode)
-#     TARGET_PATH = TARGET_PATH + "target_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + ".pth"
-#     MODELS_PATH = ATTACK_PATH + "attack_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + ".pth"
-#     RESULT_PATH = ATTACK_PATH + "attack_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + ".p"
+def train_attack_model(TARGET_PATH, ATTACK_PATH, classes, device, target_model, train_loader, test_loader, epoch, loss, optimizer, dataset_type, mode, get_attack_set, r):
+    input_classes = get_gradient_size(target_model)
+    attack_model = OverlearningAttackModel(input_classes=input_classes, output_classes=classes)
+    ATTACK_SETS = TARGET_PATH + "ol_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + "_mode" + str(args.mode)
+    TARGET_PATH = TARGET_PATH + "target_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + ".pth"
+    MODELS_PATH = ATTACK_PATH + "attack_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + ".pth"
+    RESULT_PATH = ATTACK_PATH + "attack_epoch_" + str(epoch) + "_" + loss + "_" + optimizer + ".p"
 
-#     attack = attack_training(train_loader, test_loader, attack_model, target_model, device, TARGET_PATH, r)
+    attack = attack_training(train_loader, test_loader, attack_model, target_model, device, TARGET_PATH, r)
 
-#     # if get_attack_set:
-#     # 	attack.delete_pickle(ATTACK_SETS)
-#     # 	attack.prepare_dataset(ATTACK_SETS)
+    # if get_attack_set:
+    # 	attack.delete_pickle(ATTACK_SETS)
+    # 	attack.prepare_dataset(ATTACK_SETS)
 
-#     for epoch in range(300):
-#         print("<======================= Epoch " + str(epoch+1) + " =======================>")
-#         print("attack training")
+    for epoch in range(300):
+        print("<======================= Epoch " + str(epoch+1) + " =======================>")
+        print("attack training")
 
-#         res_attack_train = attack.train(epoch, RESULT_PATH, dataset_type)
-#         print("attack testing")
-#         res_attack_test = attack.test(epoch, RESULT_PATH, dataset_type)
+        res_attack_train = attack.train(epoch, RESULT_PATH, dataset_type)
+        print("attack testing")
+        res_attack_test = attack.test(epoch, RESULT_PATH, dataset_type)
 
-#     attack.saveModel(MODELS_PATH)
-#     print("Saved Attack Model")
-#     print("Finished!!!")
+    attack.saveModel(MODELS_PATH)
+    print("Saved Attack Model")
+    print("Finished!!!")
 
 
-#     return res_attack_train, res_attack_test
+    return res_attack_train, res_attack_test
 
-# def count_data(num_classes, dataset):
-#     data_list_1 = [0 for i in range(num_classes[0])]
-#     data_list_2 = [0 for i in range(num_classes[1])]
+def count_data(num_classes, dataset):
+    data_list_1 = [0 for i in range(num_classes[0])]
+    data_list_2 = [0 for i in range(num_classes[1])]
 
-#     for _, [num0, num1] in tqdm(dataset):
-#         data_list_1[num0] += 1
-#         data_list_2[num1] += 1
+    for _, [num0, num1] in tqdm(dataset):
+        data_list_1[num0] += 1
+        data_list_2[num1] += 1
 
-#     print(data_list_1)
-#     print(data_list_2)
+    print(data_list_1)
+    print(data_list_2)
 
-#     data_list_2.sort(reverse=True)
+    data_list_2.sort(reverse=True)
 
-#     result = data_list_2[0]/(np.array(data_list_2).sum())*100.
+    result = data_list_2[0]/(np.array(data_list_2).sum())*100.
 
-#     print('%.2f%%' % (result))
+    print('%.2f%%' % (result))
 
-# def get_gradient_size(model):
-#     gradient_list = reversed(list(model.named_parameters()))
-#     for name, parameter in gradient_list:
-#         if 'weight' in name:
-#             input_size = parameter.shape[1]
-#             break
+def get_gradient_size(model):
+    gradient_list = reversed(list(model.named_parameters()))
+    for name, parameter in gradient_list:
+        if 'weight' in name:
+            input_size = parameter.shape[1]
+            break
 
-#     return input_size
+    return input_size
 
 def str_to_bool(string):
     if isinstance(string, bool):
@@ -122,7 +122,6 @@ def str_to_bool(string):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -269,10 +268,10 @@ if __name__ == "__main__":
     else:
         sys.exit("we have not supported this dataset yet! QwQ")
 
-    # acc_train, acc_test = train_attack_model(TARGET_PATH, ATTACK_PATH, num_classes[1], device, target_model, attack_trainloader, attack_testloader, first, second, dataset_type, args.get_attack_set)
+    acc_train, acc_test = train_attack_model(TARGET_PATH, ATTACK_PATH, num_classes[1], device, target_model, attack_trainloader, attack_testloader, noise, norm)
 
-    # with open('./result.csv', 'a') as f:
-    #     f.write(args.dataset + '_' + args.model + '_' + str(args.layer) + '_' + str(args.distill) + '_' + str(args.DP) + '_' + first + '_' + second)
-    #     for num in acc_test:
-    #         f.write(" " + str(round(num, 6)))
-    #     f.write("\n")
+    with open('./result.csv', 'a') as f:
+        f.write(args.dataset + '_' + args.model + '_' + str(args.layer) + '_' + str(args.distill) + '_' + str(args.DP) + '_' + noise + '_' + norm)
+        for num in acc_test:
+            f.write(" " + str(round(num, 6)))
+        f.write("\n")

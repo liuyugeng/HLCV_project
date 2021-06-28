@@ -31,3 +31,14 @@ class CNN(nn.Module):
         x_5 = torch.flatten(x_4, 1)
         x_6 = self.classifier(x_5)
         return x_6
+
+class attack_model(nn.Moudle):
+    def __init__(self, input, output):
+        super(attack_model, self).__init__()
+
+        self.classifier = nn.Linear(input, output)
+
+    def forward(self, x):
+        x = self.classifier(x)
+
+        return x
