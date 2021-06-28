@@ -6,6 +6,6 @@ Besides the original attack, we also try this attack on Knowledge Distillation(K
 
 
 <div id="refer1"></div>
-- [1] C.Song, V.Shmatikov; [Overlearning Reveals Sensitive Attributes](https://arxiv.org/pdf/1905.11742.pdf)
+- [1] C.Song, V.Shmatikov; Overlearning Reveals Sensitive Attributes
 <div id="refer2"></div>
-- [2] Z.Liu, P.Luo, X.Wang and X.Tang; [Deep Learning Face Attributes in the Wild](https://arxiv.org/abs/1411.7766)
+- [2] Z.Liu, P.Luo, X.Wang and X.Tang; Deep Learning Face Attributes in the Wild
