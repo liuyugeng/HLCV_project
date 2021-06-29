@@ -6,37 +6,37 @@ import torch.nn.functional as F
 class CNN(nn.Module):
     def __init__(self, input_channel=3, num_classes=10):
         super(CNN, self).__init__()
-        self.layer_1 = nn.Sequential(
+        self.features = nn.Sequential(
             nn.Conv2d(input_channel, 32, kernel_size=3),
-        )
-        self.layer_2 = nn.Sequential(
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),
             nn.Conv2d(32, 64, kernel_size=3),
-        )
-
-        self.unlinear = nn.Sequential(
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),
+            nn.Conv2d(64, 128, kernel_size=3),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2),
         )
 
         self.classifier = nn.Sequential(
-            nn.Linear(64*14*14, num_classes),
+            nn.Linear(128*6*6, 512),
+            nn.ReLU(),
+            nn.Linear(512, num_classes),
         )
 
 
     def forward(self, x):
-        x_1 = self.layer_1(x)
-        x_2 = self.unlinear(x_1)
-        x_3 = self.layer_2(x_2)
-        x_4 = self.unlinear(x_3)
-        x_5 = torch.flatten(x_4, 1)
-        x_6 = self.classifier(x_5)
-        return x_6
+        x = self.features(x)
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
+        return x
 
-class attack_model(nn.Moudle):
+class attack_model(nn.Module):
     def __init__(self, inputs, outputs):
         super(attack_model, self).__init__()
         self.classifier = nn.Linear(inputs, outputs)
 
     def forward(self, x):
+        x = torch.flatten(x, 1)
         x = self.classifier(x)
         return x

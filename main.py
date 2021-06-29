@@ -59,56 +59,25 @@ def test_target_model(model, PATH, dataset, device):
 
 
 def train_attack_model(TARGET_PATH, ATTACK_PATH, output_classes, device, target_model, train_loader, test_loader, noise, norm, layer):
-    input_classes = get_gradient_size(target_model, layer)
-    attack_model = get_attack_model(input_classes=input_classes, output_classes=output_classes)
-    TARGET_PATH = TARGET_PATH + "target_epoch_" + str(noise) + "_" + str(norm) + ".pth"
+    TARGET_PATH = TARGET_PATH + "target_model_" + str(noise) + "_" + str(norm) + ".pth"
 
-    attack = attack_training(train_loader, test_loader, attack_model, target_model, device, TARGET_PATH, r)
 
-    # if get_attack_set:
-    # 	attack.delete_pickle(ATTACK_SETS)
-    # 	attack.prepare_dataset(ATTACK_SETS)
+    attack = attack_training(device, train_loader, test_loader, target_model, TARGET_PATH, ATTACK_PATH, layer)
+    attack.init_attack_model(output_classes)
 
     for epoch in range(300):
         print("<======================= Epoch " + str(epoch+1) + " =======================>")
         print("attack training")
-
-        res_attack_train = attack.train(epoch, RESULT_PATH, dataset_type)
+        acc_train = attack.train()
         print("attack testing")
-        res_attack_test = attack.test(epoch, RESULT_PATH, dataset_type)
+        acc_test = attack.test()
 
-    attack.saveModel(MODELS_PATH)
+    attack.saveModel(ATTACK_PATH)
     print("Saved Attack Model")
     print("Finished!!!")
 
 
-    return res_attack_train, res_attack_test
-
-def count_data(num_classes, dataset):
-    data_list_1 = [0 for i in range(num_classes[0])]
-    data_list_2 = [0 for i in range(num_classes[1])]
-
-    for _, [num0, num1] in tqdm(dataset):
-        data_list_1[num0] += 1
-        data_list_2[num1] += 1
-
-    print(data_list_1)
-    print(data_list_2)
-
-    data_list_2.sort(reverse=True)
-
-    result = data_list_2[0]/(np.array(data_list_2).sum())*100.
-
-    print('%.2f%%' % (result))
-
-def get_gradient_size(model):
-    gradient_list = reversed(list(model.named_parameters()))
-    for name, parameter in gradient_list:
-        if 'weight' in name:
-            input_size = parameter.shape[1]
-            break
-
-    return input_size
+    return acc_train, acc_test
 
 def str_to_bool(string):
     if isinstance(string, bool):
@@ -138,8 +107,8 @@ if __name__ == "__main__":
     parser.add_argument('-a', '--attribute', type=str, default=None, 
                         help='Choose one attribute for UTKFace(age, gender or race) and CelebA(landmarks, attr, identity or bbox, but we suggest using the attr to do membership inference attacks) (default: race)')
 
-    parser.add_argument('-l', '--layer', type=int, default=-1,
-                        help='choose the last layers (default: -1)')
+    parser.add_argument('-l', '--layer', type=int, default=-2,
+                        help='choose the last layers (default: 1)')
 
     parser.add_argument('-dp', '--DP', type=str_to_bool, default=False,
                         help='if use differential privacy model, defualt no')
@@ -266,9 +235,3 @@ if __name__ == "__main__":
         sys.exit("we have not supported this dataset yet! QwQ")
 
     acc_train, acc_test = train_attack_model(TARGET_PATH, ATTACK_PATH, num_classes[1], device, target_model, attack_trainloader, attack_testloader, noise, norm, args.layer)
-
-    with open('./result.csv', 'a') as f:
-        f.write(args.dataset + '_' + args.model + '_' + str(args.layer) + '_' + str(args.distill) + '_' + str(args.DP) + '_' + noise + '_' + norm)
-        for num in acc_test:
-            f.write(" " + str(round(num, 6)))
-        f.write("\n")
