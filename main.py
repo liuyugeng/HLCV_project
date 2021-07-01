@@ -60,12 +60,12 @@ def test_target_model(model, PATH, dataset, device):
 
 def train_attack_model(TARGET_PATH, ATTACK_PATH, output_classes, device, target_model, train_loader, test_loader, noise, norm, layer):
     TARGET_PATH = TARGET_PATH + "target_model_" + str(noise) + "_" + str(norm) + ".pth"
-
+    ATTACK_PATH = ATTACK_PATH + "attack_model_" + str(-layer) +"pth"
 
     attack = attack_training(device, train_loader, test_loader, target_model, TARGET_PATH, ATTACK_PATH, layer)
     attack.init_attack_model(output_classes)
 
-    for epoch in range(300):
+    for epoch in range(100):
         print("<======================= Epoch " + str(epoch+1) + " =======================>")
         print("attack training")
         acc_train = attack.train()
@@ -137,8 +137,6 @@ if __name__ == "__main__":
     parser.add_argument('-da', '--delta', type=float, default=1e-5,
                         help='choose delta for dp model')
 
-    parser.add_argument('-gas', '--get_attack_set', type=str_to_bool, default=False,
-                        help='whether or not get attack set before train attack model, if false using the downloaded results')
 
     args = parser.parse_args()
 
